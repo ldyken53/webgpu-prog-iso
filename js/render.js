@@ -98,6 +98,8 @@
         });
     };
     headstartSlider.onchange = async () => {
+        var width = canvas.width / resolutionToDivisor[resolution.value];
+        var height = canvas.height / resolutionToDivisor[resolution.value];
         render.volumeRC = new VolumeRaycaster(
             device, width, height, recordVisibleBlocksUI, enableSpeculationUI, parseInt(headstartSlider.value));
         await render.volumeRC.setCompressedVolume(
