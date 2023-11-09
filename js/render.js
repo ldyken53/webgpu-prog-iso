@@ -27,7 +27,7 @@
     if (window.location.hostname == "www.willusher.io") {
         volumeURL = "https://cdn.willusher.io/bcmc-demo-data/" + zfpDataName;
     } else {
-        volumeURL = "/models/" + zfpDataName;
+        volumeURL = "/models/bcmc-data/" + zfpDataName;
     }
     var compressedData =
         await fetch(volumeURL).then((res) => res.arrayBuffer().then(function(arr) {
@@ -73,15 +73,18 @@
     var resolutionToDivisor = {"full": 1, "half": 2, "quarter": 4};
     var width = canvas.width / resolutionToDivisor[resolution.value];
     var height = canvas.height / resolutionToDivisor[resolution.value];
+
+    var headstartSlider = document.getElementById("startSpecCount");
     this.volumeRC =
-        new VolumeRaycaster(device, width, height, recordVisibleBlocksUI, enableSpeculationUI);
+        new VolumeRaycaster(device, width, height, recordVisibleBlocksUI, enableSpeculationUI, parseInt(headstartSlider.value));
+
     var render = this;
     resolution.onchange = async () => {
         var width = canvas.width / resolutionToDivisor[resolution.value];
         var height = canvas.height / resolutionToDivisor[resolution.value];
         console.log(`Changed resolution to ${width}x${height}`);
         render.volumeRC = new VolumeRaycaster(
-            device, width, height, recordVisibleBlocksUI, enableSpeculationUI);
+            device, width, height, recordVisibleBlocksUI, enableSpeculationUI, parseInt(headstartSlider.value));
         await render.volumeRC.setCompressedVolume(
             compressedData, dataset.compressionRate, volumeDims, dataset.scale);
         recomputeSurface = true;
@@ -94,6 +97,21 @@
             ]
         });
     };
+    headstartSlider.onchange = async () => {
+        render.volumeRC = new VolumeRaycaster(
+            device, width, height, recordVisibleBlocksUI, enableSpeculationUI, parseInt(headstartSlider.value));
+        await render.volumeRC.setCompressedVolume(
+            compressedData, dataset.compressionRate, volumeDims, dataset.scale);
+        recomputeSurface = true;
+        render.renderPipelineBG = device.createBindGroup({
+            layout: renderBGLayout,
+            entries: [
+                {binding: 0, resource: render.volumeRC.renderTarget.createView()},
+                {binding: 1, resource: {buffer: resolutionBuffer}},
+                {binding: 2, resource: sampler}
+            ]
+        });
+    }
     await this.volumeRC.setCompressedVolume(
         compressedData, dataset.compressionRate, volumeDims, dataset.scale);
 
