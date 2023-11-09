@@ -82,6 +82,9 @@ void main() {
 
     // Fill speculated ray ID buffer
     if (speculation_count > 1) {
+        if (current_pass_index == 0) {
+            ray_offsets[ray_index] = ray_index;
+        }
         for (int i = 0; i < speculation_count; i++) {
             ray_ids[ray_offsets[ray_index] * speculation_count + i] = ray_index;
         }
