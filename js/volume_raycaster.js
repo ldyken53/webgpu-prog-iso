@@ -1394,6 +1394,7 @@ VolumeRaycaster.prototype.renderSurface = async function(
 
         this.totalPassTime = 0;
         this.numPasses = 0;
+        this.renderID = Date.now().toString().slice(-4);
         this.speculationCount = this.startSpecCount;
         this.speculationEnabled = this.enableSpeculationUI.checked;
 
@@ -1563,6 +1564,41 @@ VolumeRaycaster.prototype.renderSurface = async function(
                                               0,
                                               this.width * this.height * 4);
             this.device.queue.submit([commandEncoder.finish()]);
+
+            if (document.getElementById("outputImages").checked) {
+                var rayAfterActiveReadback = this.device.createBuffer({
+                    size: this.width * this.height * 4,
+                    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+                });
+                var commandEncoder = this.device.createCommandEncoder();
+
+                commandEncoder.copyBufferToBuffer(
+                    this.rayAfterActiveBuffer, 0, rayAfterActiveReadback, 0, rayAfterActiveReadback.size);
+                this.device.queue.submit([commandEncoder.finish()]);
+                await this.device.queue.onSubmittedWorkDone();
+        
+                await rayAfterActiveReadback.mapAsync(GPUMapMode.READ);
+ 
+                var rayAfterActive = new Uint32Array(rayAfterActiveReadback.getMappedRange());
+                
+                var outCanvas = document.getElementById('out-canvas');
+                var context = outCanvas.getContext('2d');
+                var imgData = context.createImageData(outCanvas.width, outCanvas.height);
+                for (var i = 0; i < this.width * this.height; i++) {
+                    imgData.data[i * 4] = rayAfterActive[i] * 255;
+                    imgData.data[i * 4 + 1] = rayAfterActive[i] * 255;
+                    imgData.data[i * 4 + 2] = rayAfterActive[i] * 255;
+                    imgData.data[i * 4 + 3] = 255;
+                }
+                context.putImageData(imgData, 0, 0);
+                var numPasses = this.numPasses + 1;
+                var renderID = this.renderID;
+                outCanvas.toBlob(function(b) {
+                    saveAs(b, `${renderID}_activeMask_pass${numPasses}.png`);
+                }, "image/png");
+                rayAfterActiveReadback.unmap();
+                rayAfterActiveReadback.destroy();
+            }
 
             numRaysActive = await this.scanRayAfterActive.scan(this.width * this.height);
             end = performance.now();
