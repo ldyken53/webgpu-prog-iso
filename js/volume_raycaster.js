@@ -1603,7 +1603,7 @@ VolumeRaycaster.prototype.renderSurface = async function(
             numRaysActive = await this.scanRayAfterActive.scan(this.width * this.height);
             end = performance.now();
             this.passPerfStats["countRemainingActiveRays_ms"] = end - start;
-            this.passPerfStats["endPassRaysActive_ms"] = numRaysActive;
+            this.passPerfStats["endPassRaysActive"] = numRaysActive;
             console.log(`PASS TOOK: ${end - startPass}ms`);
             // console.log(`num rays active after raytracing: ${numRaysActive}`);
 

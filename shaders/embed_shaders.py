@@ -59,7 +59,7 @@ except:
     pass
 
 block_size = 512
-sort_chunk_size = 64
+sort_chunk_size = 256
 draw_fog = False
 if "-fog" in sys.argv:
     draw_fog = True
