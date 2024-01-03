@@ -49,7 +49,8 @@ shaders = [
     "compute_coarse_cell_range.comp",
     "reset_speculative_ids.comp",
     "depth_composite.comp",
-    "mark_ray_active.comp"
+    "mark_ray_active.comp",
+    "color_active_rays.comp"
 ]
 
 try:

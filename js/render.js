@@ -397,7 +397,7 @@
             if (document.getElementById("outputImages").checked) {
                 await takeScreenshot(
                     device,
-                    `${this.volumeRC.renderID}_${dataset.name.substring(0, 5)}_pass${this.volumeRC.numPasses}`,
+                    `${dataset.name.substring(0, 5)}${this.volumeRC.renderID}_${String(this.volumeRC.numPasses).padStart(4,'0')}`,
                     this.volumeRC.renderTarget,
                     imageBuffer,
                     document.getElementById('out-canvas'));

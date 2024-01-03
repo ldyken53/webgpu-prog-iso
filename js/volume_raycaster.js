@@ -300,6 +300,11 @@ var VolumeRaycaster = function(
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING |
                    GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC
     });
+    this.renderTargetCopy = this.device.createTexture({
+        size: [this.width, this.height, 1],
+        format: renderTargetFormat,
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST
+    });
 
     this.renderTargetDebugBGLayout = this.device.createBindGroupLayout({
         entries: [{
@@ -711,6 +716,42 @@ var VolumeRaycaster = function(
         }
     });
 
+    this.colorActiveRaysBGLayout = device.createBindGroupLayout({
+        entries: [
+            {
+                binding: 0,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {
+                    type: "uniform",
+                }
+            },
+            {
+                binding: 1,
+                visibility: GPUShaderStage.COMPUTE,
+                buffer: {
+                    type: "storage",
+                }
+            },
+            {
+                binding: 2,
+                visibility: GPUShaderStage.COMPUTE,
+                texture: { viewDimension: "2d" }
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.COMPUTE,
+                storageTexture: { access: "write-only", format: renderTargetFormat }
+            },
+        ]
+    });
+    this.colorActiveRaysPipeline = device.createComputePipeline({
+        layout: device.createPipelineLayout({bindGroupLayouts: [this.colorActiveRaysBGLayout]}),
+        compute: {
+            module: device.createShaderModule({code: color_active_rays_comp_spv}),
+            entryPoint: "main",
+        }
+    });
+
     this.combineBlockInformationBGLayout = device.createBindGroupLayout({
         entries: [
             {
@@ -1111,6 +1152,15 @@ VolumeRaycaster.prototype.setCompressedVolume =
             {binding: 2, resource: {buffer: this.rayAfterActiveBuffer}},
         ]
     });
+    this.colorActiveRaysBG = this.device.createBindGroup({
+        layout: this.colorActiveRaysBGLayout,
+        entries: [
+            {binding: 0, resource: {buffer: this.volumeInfoBuffer}},
+            {binding: 1, resource: {buffer: this.rayAfterActiveBuffer}},
+            {binding: 2, resource: this.renderTargetCopy.createView()},
+            {binding: 3, resource: this.renderTarget.createView()}
+        ]
+    });
 };
 
 VolumeRaycaster.prototype.getMemoryStats = function() {
@@ -1394,7 +1444,7 @@ VolumeRaycaster.prototype.renderSurface = async function(
 
         this.totalPassTime = 0;
         this.numPasses = 0;
-        this.renderID = Date.now().toString().slice(-4);
+        this.renderID = Date.now().toString().slice(-5);
         this.speculationCount = this.startSpecCount;
         this.speculationEnabled = this.enableSpeculationUI.checked;
 
@@ -1564,46 +1614,62 @@ VolumeRaycaster.prototype.renderSurface = async function(
                                               0,
                                               this.width * this.height * 4);
             this.device.queue.submit([commandEncoder.finish()]);
-
-            if (document.getElementById("outputImages").checked) {
-                var rayAfterActiveReadback = this.device.createBuffer({
-                    size: this.width * this.height * 4,
-                    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-                });
-                var commandEncoder = this.device.createCommandEncoder();
-
-                commandEncoder.copyBufferToBuffer(
-                    this.rayAfterActiveBuffer, 0, rayAfterActiveReadback, 0, rayAfterActiveReadback.size);
-                this.device.queue.submit([commandEncoder.finish()]);
-                await this.device.queue.onSubmittedWorkDone();
         
-                await rayAfterActiveReadback.mapAsync(GPUMapMode.READ);
+            // if (document.getElementById("outputImages").checked) {
+            //     var rayAfterActiveReadback = this.device.createBuffer({
+            //         size: this.width * this.height * 4,
+            //         usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+            //     });
+            //     var commandEncoder = this.device.createCommandEncoder();
+
+            //     commandEncoder.copyBufferToBuffer(
+            //         this.rayAfterActiveBuffer, 0, rayAfterActiveReadback, 0, rayAfterActiveReadback.size);
+            //     this.device.queue.submit([commandEncoder.finish()]);
+            //     await this.device.queue.onSubmittedWorkDone();
+        
+            //     await rayAfterActiveReadback.mapAsync(GPUMapMode.READ);
  
-                var rayAfterActive = new Uint32Array(rayAfterActiveReadback.getMappedRange());
+            //     var rayAfterActive = new Uint32Array(rayAfterActiveReadback.getMappedRange());
                 
-                var outCanvas = document.getElementById('out-canvas');
-                var context = outCanvas.getContext('2d');
-                var imgData = context.createImageData(outCanvas.width, outCanvas.height);
-                for (var i = 0; i < this.width * this.height; i++) {
-                    imgData.data[i * 4] = rayAfterActive[i] * 255;
-                    imgData.data[i * 4 + 1] = rayAfterActive[i] * 255;
-                    imgData.data[i * 4 + 2] = rayAfterActive[i] * 255;
-                    imgData.data[i * 4 + 3] = 255;
-                }
-                context.putImageData(imgData, 0, 0);
-                var numPasses = this.numPasses + 1;
-                var renderID = this.renderID;
-                outCanvas.toBlob(function(b) {
-                    saveAs(b, `${renderID}_activeMask_pass${numPasses}.png`);
-                }, "image/png");
-                rayAfterActiveReadback.unmap();
-                rayAfterActiveReadback.destroy();
-            }
+            //     var outCanvas = document.getElementById('out-canvas');
+            //     var context = outCanvas.getContext('2d');
+            //     var imgData = context.createImageData(outCanvas.width, outCanvas.height);
+            //     for (var i = 0; i < this.width * this.height; i++) {
+            //         imgData.data[i * 4] = rayAfterActive[i] * 255;
+            //         imgData.data[i * 4 + 1] = rayAfterActive[i] * 255;
+            //         imgData.data[i * 4 + 2] = rayAfterActive[i] * 255;
+            //         imgData.data[i * 4 + 3] = 255;
+            //     }
+            //     context.putImageData(imgData, 0, 0);
+            //     var numPasses = this.numPasses + 1;
+            //     var renderID = this.renderID;
+            //     outCanvas.toBlob(function(b) {
+            //         saveAs(b, `${renderID}_activeMask_pass${numPasses}.png`);
+            //     }, "image/png");
+            //     rayAfterActiveReadback.unmap();
+            //     rayAfterActiveReadback.destroy();
+            // }
 
             numRaysActive = await this.scanRayAfterActive.scan(this.width * this.height);
             end = performance.now();
             this.passPerfStats["countRemainingActiveRays_ms"] = end - start;
             this.passPerfStats["endPassRaysActive"] = numRaysActive;
+
+            if (document.getElementById("colorActive").checked) {
+                var commandEncoder = this.device.createCommandEncoder();
+                commandEncoder.copyTextureToTexture(
+                    { texture: this.renderTarget}, 
+                    { texture: this.renderTargetCopy},
+                    { width: this.width, height: this.height, depthOrArrayLayers: 1 });
+                var pass = commandEncoder.beginComputePass();
+                pass.setPipeline(this.colorActiveRaysPipeline);
+                pass.setBindGroup(0, this.colorActiveRaysBG);
+                pass.dispatchWorkgroups(Math.ceil(this.width / 32), this.height, 1);
+                pass.end();
+                this.device.queue.submit([commandEncoder.finish()]);
+            }
+
+            end = performance.now();
             console.log(`PASS TOOK: ${end - startPass}ms`);
             // console.log(`num rays active after raytracing: ${numRaysActive}`);
 

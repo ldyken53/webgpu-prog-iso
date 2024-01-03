@@ -195,14 +195,10 @@ void main() {
         grid_iterator_advance(coarse_grid_iter);
     }
 
-    if (speculated == 0) {
+    if (speculated < speculation_count) {
         // If we didn't intersect this ray with any blocks (no speculated rays spawned),
         // then this ray has terminated.
         rays[ray_index].t = FLT_MAX;
-    } else if (speculated < speculation_count) {
-        // If we speculated some rays, then this ray is partially terminated. We need
-        // to finish tracing the speculated rays, then can mark it complete in depth_composite
-        rays[ray_index].t = -FLT_MAX;
     }
 }
 
