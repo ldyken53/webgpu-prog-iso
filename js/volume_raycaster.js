@@ -1444,7 +1444,7 @@ VolumeRaycaster.prototype.renderSurface = async function(
 
         this.totalPassTime = 0;
         this.numPasses = 0;
-        this.renderID = Date.now().toString().slice(-5);
+        this.renderID = Date.now().toString().slice(-6);
         this.speculationCount = this.startSpecCount;
         this.speculationEnabled = this.enableSpeculationUI.checked;
 
@@ -1475,7 +1475,7 @@ VolumeRaycaster.prototype.renderSurface = async function(
         // We need to reset the speculation count
         var uploadSpeculationCount = this.device.createBuffer(
             {size: 4, usage: GPUBufferUsage.COPY_SRC, mappedAtCreation: true});
-        new Uint32Array(uploadSpeculationCount.getMappedRange()).set([this.speculationCount]);
+        new Uint32Array(uploadSpeculationCount.getMappedRange()).set([0]);
         uploadSpeculationCount.unmap();
         commandEncoder.copyBufferToBuffer(
             uploadSpeculationCount, 0, this.viewParamBuf, (16 + 8 + 1 + 1) * 4, 4);
@@ -1498,11 +1498,51 @@ VolumeRaycaster.prototype.renderSurface = async function(
         this.passPerfStats["volumeDims"] = this.volumeDims;
         this.passPerfStats["imageSize"] = [this.width, this.height];
         this.passPerfStats["nPixels"] = this.width * this.height;
+        this.passPerfStats["startSpecCount"] = this.startSpecCount;
 
         // Save camera info as well for reproducibility
         this.passPerfStats["eyePos"] = [eyePos[0], eyePos[1], eyePos[2]];
         this.passPerfStats["eyeDir"] = [eyeDir[0], eyeDir[1], eyeDir[2]];
         this.passPerfStats["upDir"] = [upDir[0], upDir[1], upDir[2]];
+
+        var start = performance.now();
+        await this.macroTraverse();
+        var end = performance.now();
+        this.passPerfStats["initialMacroTraverse_ms"] = end - start;
+
+        start = performance.now();
+        var commandEncoder = this.device.createCommandEncoder();
+        var pass = commandEncoder.beginComputePass();
+        pass.setPipeline(this.markRayActivePipeline);
+        pass.setBindGroup(0, this.markRayActiveBG);
+        pass.dispatchWorkgroups(Math.ceil(this.width / 32), this.height, 1);
+        pass.end();
+        // We scan the speculativeRayOffsetBuffer, so copy the ray active information over
+        commandEncoder.copyBufferToBuffer(this.rayAfterActiveBuffer,
+                                          0,
+                                          this.speculativeRayOffsetBuffer,
+                                          0,
+                                          this.width * this.height * 4);
+        this.device.queue.submit([commandEncoder.finish()]);
+        numRaysActive = await this.scanRayAfterActive.scan(this.width * this.height);
+        end = performance.now();
+        this.passPerfStats["countInitialActiveRays_ms"] = end - start;
+        this.passPerfStats["initialRaysActive"] = numRaysActive;
+        console.log("Starting rays active: " + numRaysActive);
+
+        var commandEncoder = this.device.createCommandEncoder();
+        this.speculationCount =
+            Math.min(Math.floor(this.width * this.height * this.startSpecCount / numRaysActive), 64);
+        console.log(`First pass speculation count is ${this.speculationCount}`);
+        var uploadSpeculationCount = this.device.createBuffer(
+            {size: 4, usage: GPUBufferUsage.COPY_SRC, mappedAtCreation: true});
+        new Uint32Array(uploadSpeculationCount.getMappedRange()).set([
+            this.speculationCount
+        ]);
+        uploadSpeculationCount.unmap();
+        commandEncoder.copyBufferToBuffer(
+            uploadSpeculationCount, 0, this.viewParamBuf, (16 + 8 + 1 + 1) * 4, 4);
+        this.device.queue.submit([commandEncoder.finish()]);
     }
     console.log(`++++ Surface pass ${this.numPasses} ++++`);
     this.passPerfStats["passID"] = this.numPasses;

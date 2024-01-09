@@ -82,9 +82,9 @@ void main() {
 
     // Fill speculated ray ID buffer
     if (speculation_count > 1) {
-        if (current_pass_index == 0) {
-            ray_offsets[ray_index] = ray_index;
-        }
+        // if (current_pass_index == 0) {
+        //     ray_offsets[ray_index] = ray_index;
+        // }
         for (int i = 0; i < speculation_count; i++) {
             ray_ids[ray_offsets[ray_index] * speculation_count + i] = ray_index;
         }
@@ -167,6 +167,9 @@ void main() {
             const vec2 cell_range = voxel_ranges[block_index];
 
             if (isovalue >= cell_range.x && isovalue <= cell_range.y) {
+                if (speculation_count == 0) {
+                    return;
+                }
                 block_ids[ray_offsets[ray_index] * speculation_count + speculated] =
                     block_index;
                 speculated++;
@@ -195,10 +198,8 @@ void main() {
         grid_iterator_advance(coarse_grid_iter);
     }
 
-    if (speculated < speculation_count) {
-        // If we didn't intersect this ray with any blocks (no speculated rays spawned),
-        // then this ray has terminated.
-        rays[ray_index].t = FLT_MAX;
-    }
+    // If we didn't intersect this ray with as many blocks as we speculate,
+    // then this ray has terminated.
+    rays[ray_index].t = FLT_MAX;
 }
 
