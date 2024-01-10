@@ -77,7 +77,8 @@ var datasets = {
     skull: {
         compressionRate: 2,
         name: "skull_256x256x256_uint8.raw.crate2",
-        range: [10, 255],
+        // range: [10, 255],
+        range: [40, 140],
         scale: [1, 1, 1],
     },
     magnetic: {

@@ -296,23 +296,27 @@
             if (requestBenchmark == "random") {
                 var valueBenchmark =
                     new RandomIsovalueBenchmark(isovalueSlider, dataset.range);
-                cameraBenchmark = new CameraOrbitBenchmark(1.5);
+                // cameraBenchmark = new CameraOrbitBenchmark(1.5);
+                cameraBenchmark = new RotateBenchmark(1.5, canvas.width, canvas.height);
                 currentBenchmark = new NestedBenchmark(valueBenchmark, cameraBenchmark);
             } else if (requestBenchmark == "sweepUp") {
                 var valueBenchmark =
                     new SweepIsovalueBenchmark(isovalueSlider, dataset.range, true);
-                cameraBenchmark = new CameraOrbitBenchmark(1.5);
+                // cameraBenchmark = new CameraOrbitBenchmark(1.5);
+                cameraBenchmark = new RotateBenchmark(1.5, canvas.width, canvas.height);
                 currentBenchmark = new NestedBenchmark(valueBenchmark, cameraBenchmark);
             } else if (requestBenchmark == "sweepDown") {
                 var valueBenchmark =
                     new SweepIsovalueBenchmark(isovalueSlider, dataset.range, false);
-                cameraBenchmark = new CameraOrbitBenchmark(1.5);
+                // cameraBenchmark = new CameraOrbitBenchmark(1.5);
+                cameraBenchmark = new RotateBenchmark(1.5, canvas.width, canvas.height);
                 currentBenchmark = new NestedBenchmark(valueBenchmark, cameraBenchmark);
             } else if (requestBenchmark == "manualSingle") {
                 currentBenchmark = new ManualSingleBenchmark();
                 recomputeSurface = true;
             } else {
-                cameraBenchmark = new CameraOrbitBenchmark(1.5);
+                // cameraBenchmark = new CameraOrbitBenchmark(1.5);
+                cameraBenchmark = new RotateBenchmark(1.5, canvas.width, canvas.height);
                 currentBenchmark = cameraBenchmark;
             }
             requestBenchmark = null;
@@ -329,6 +333,16 @@
                     canvas.width,
                     canvas.height,
                 ]);
+                cameraChanged = true;
+            } else if (currentBenchmark.name.includes("rotate")) {
+                if (cameraBenchmark.iteration == 1) {
+                    camera = new ArcballCamera(cameraBenchmark.startPoint, center, up, 4, [
+                        canvas.width,
+                        canvas.height,
+                    ]);
+                } else {
+                    camera.rotate([cameraBenchmark.lastX, cameraBenchmark.lastY], [cameraBenchmark.currentX, cameraBenchmark.currentY]);
+                }
                 cameraChanged = true;
             }
         }

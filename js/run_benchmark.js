@@ -1,5 +1,6 @@
 const benchmarkIterations = 100;
-const cameraIterations = 20;
+const cameraIterations = 10;
+const rotateIterations = 16;
 
 var RandomIsovalueBenchmark = function(isovalueSlider, range) {
     this.name = "random";
@@ -101,11 +102,65 @@ CameraOrbitBenchmark.prototype.run = function() {
 
     this.currentPoint = vec3.set(vec3.create(), x, y, z);
     this.iteration += 1;
+    
     return true;
 };
 
 CameraOrbitBenchmark.prototype.reset = function() {
     this.iteration = 0;
+};
+
+var RotateBenchmark = function(radius, width, height) {
+    this.iteration = 0;
+    this.name = "rotate";
+    this.numIterations = rotateIterations;
+    this.radius = radius;
+    this.width = width;
+    this.height = height;
+
+    var theta = Math.random() * 2 * Math.PI; // Azimuthal angle
+    var phi = Math.acos(2 * Math.random() - 1); // Polar angle
+    var x = radius * Math.sin(phi) * Math.cos(theta);
+    var y = radius * Math.sin(phi) * Math.sin(theta);
+    var z = radius * Math.cos(phi);
+    this.startPoint = vec3.set(vec3.create(), x, y, z);
+
+    this.startX = Math.random() * this.width;
+    this.startY = Math.random() * this.height;
+    this.currentX = this.startX;
+    this.currentY = this.startY;
+    this.endX = Math.random() * this.width;
+    this.endY = Math.random() * this.height;
+};
+
+RotateBenchmark.prototype.run = function() {
+    if (this.iteration == this.numIterations) {
+        return false;
+    }
+    this.lastX = this.currentX;
+    this.lastY = this.currentY;
+    const t = this.iteration / (this.numIterations - 1);
+    this.currentX = this.startX + t * (this.endX - this.startX);
+    this.currentY = this.startY + t * (this.endY - this.startY);
+    this.iteration += 1;
+    return true;
+};
+
+RotateBenchmark.prototype.reset = function() {
+    this.iteration = 0;
+    var theta = Math.random() * 2 * Math.PI; // Azimuthal angle
+    var phi = Math.acos(2 * Math.random() - 1); // Polar angle
+    var x = this.radius * Math.sin(phi) * Math.cos(theta);
+    var y = this.radius * Math.sin(phi) * Math.sin(theta);
+    var z = this.radius * Math.cos(phi);
+    this.startPoint = vec3.set(vec3.create(), x, y, z);
+
+    this.startX = Math.random() * this.width;
+    this.startY = Math.random() * this.height;
+    this.currentX = this.startX;
+    this.currentY = this.startY;
+    this.endX = Math.random() * this.width;
+    this.endY = Math.random() * this.height;
 };
 
 var NestedBenchmark = function(outerLoop, innerLoop) {
