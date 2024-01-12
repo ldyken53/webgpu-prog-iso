@@ -411,14 +411,19 @@
             if (document.getElementById("outputImages").checked) {
                 if (this.volumeRC.numPasses == 1 || surfaceDone){
                     var filename = dataset.name.replace(/_/g, '').substring(0, 5);
-                    if (currentBenchmark.name.includes("rotate")) {
-                        filename = filename + "_seq" + cameraBenchmark.renderID + "_" + cameraBenchmark.iteration;
-                        if (this.volumeRC.numPasses == 1) {
-                            filename += "_001spp";
+                    if (currentBenchmark) {
+                        if (currentBenchmark.name.includes("rotate")) {
+                            filename = filename + "_seq" + cameraBenchmark.renderID + "_" + cameraBenchmark.iteration;
+                            if (this.volumeRC.numPasses == 1) {
+                                filename += "_001spp";
+                            } else {
+                                filename += "_ref";
+                            }
                         } else {
-                            filename += "_ref";
+                            filename += this.volumeRC.renderID + "_" + String(this.volumeRC.numPasses).padStart(4,'0');
                         }
-                    } else {
+                    }
+                    else {
                         filename += this.volumeRC.renderID + "_" + String(this.volumeRC.numPasses).padStart(4,'0');
                     }
                     await takeScreenshot(
