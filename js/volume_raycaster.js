@@ -1732,6 +1732,8 @@ VolumeRaycaster.prototype.renderSurface = async function(
                     uploadSpeculationCount, 0, this.viewParamBuf, (16 + 8 + 1 + 1) * 4, 4);
                 this.device.queue.submit([commandEncoder.finish()]);
                 await this.device.queue.onSubmittedWorkDone();
+                console.log(`End pass rays active: ${numRaysActive}`);
+                console.log(`Next pass speculation count: ${this.speculationCount}`);     
             }
             console.log(`++++++++++`);
         }

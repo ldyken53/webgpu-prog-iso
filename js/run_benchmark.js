@@ -1,4 +1,4 @@
-const benchmarkIterations = 100;
+const benchmarkIterations = 250;
 const cameraIterations = 10;
 const rotateIterations = 16;
 
@@ -117,6 +117,7 @@ var RotateBenchmark = function(radius, width, height) {
     this.radius = radius;
     this.width = width;
     this.height = height;
+    this.renderID = Date.now().toString().slice(-6);
 
     var theta = Math.random() * 2 * Math.PI; // Azimuthal angle
     var phi = Math.acos(2 * Math.random() - 1); // Polar angle
@@ -147,6 +148,7 @@ RotateBenchmark.prototype.run = function() {
 };
 
 RotateBenchmark.prototype.reset = function() {
+    this.renderID = Date.now().toString().slice(-6);
     this.iteration = 0;
     var theta = Math.random() * 2 * Math.PI; // Azimuthal angle
     var phi = Math.acos(2 * Math.random() - 1); // Polar angle

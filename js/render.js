@@ -409,12 +409,25 @@
             totalMemDisplay.innerHTML = `Total Memory: ${memUse[2]}`;
 
             if (document.getElementById("outputImages").checked) {
-                await takeScreenshot(
-                    device,
-                    `${dataset.name.replace(/_/g, '').substring(0, 5)}${this.volumeRC.renderID}_${String(this.volumeRC.numPasses).padStart(4,'0')}`,
-                    this.volumeRC.renderTarget,
-                    imageBuffer,
-                    document.getElementById('out-canvas'));
+                if (this.volumeRC.numPasses == 1 || surfaceDone){
+                    var filename = dataset.name.replace(/_/g, '').substring(0, 5);
+                    if (currentBenchmark.name.includes("rotate")) {
+                        filename = filename + "_seq" + cameraBenchmark.renderID + "_" + cameraBenchmark.iteration;
+                        if (this.volumeRC.numPasses == 1) {
+                            filename += "_001spp";
+                        } else {
+                            filename += "_ref";
+                        }
+                    } else {
+                        filename += this.volumeRC.renderID + "_" + String(this.volumeRC.numPasses).padStart(4,'0');
+                    }
+                    await takeScreenshot(
+                        device,
+                        filename,
+                        this.volumeRC.renderTarget,
+                        imageBuffer,
+                        document.getElementById('out-canvas'));
+                }
             }
         }
         if (saveScreenshot) {
