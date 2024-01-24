@@ -193,18 +193,19 @@ NestedBenchmark.prototype.run = function () {
 // we're going to run in autobenchmark mode
 export function generateBenchmarkConfigurations() {
     // Do we really need to go up to ssc 8? Probably just on the 3080
-    const startSpecCounts = [1, 2, 4];//, 8];
+    const startSpecCounts = [1, 2];//, 8];
     //const resolutions = ["1080", "720", "360"];
     const resolutions = ["720", "360"];
     const imageCompleteness = [1.0];
-    const datasets = ["skull",
-        "tacc_turbulence",
-        "magnetic",
-        "kingsnake",
-        "chameleon",
-        "beechnut",
-        "miranda",
-        "jicf_q",
+    const datasets = [
+        // "skull",
+        // "tacc_turbulence",
+        // "magnetic",
+        // "kingsnake",
+        // "chameleon",
+        // "beechnut",
+        // "miranda",
+        // "jicf_q",
         "dns_large",
         "richtmyer_meshkov"
     ];

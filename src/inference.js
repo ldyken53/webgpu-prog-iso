@@ -1,5 +1,6 @@
 import 'jimp';
 import {Tensor, InferenceSession} from "onnxruntime-web/webgpu";
+import * as tf from "@tensorflow/tfjs";
 // import * as ort from "onnxruntime-web"; 
 var recurrentState = false;
 
@@ -12,28 +13,35 @@ export async function runInference(session, preprocessedData, width, height) {
     // create feeds with the input name from model export and the preprocessed data.
     const feeds = {};
     const architecture = [32, 64, 64, 80];
-    feeds[session.inputNames[0]] = preprocessedData;
-    for (var i = 0; i < session.inputNames.length - 1; i++) {
+    var names = Object.keys(session.signature.inputs).sort();
+    console.log(names);
+    feeds[names[0]] = preprocessedData;
+    for (var i = 0; i < names.length - 1; i++) {
         if (recurrentState) {
-            feeds[session.inputNames[i + 1]] = recurrentState[i];
+            feeds[names[i + 1]] = recurrentState[i];
         } else {
             var w = width / 2**i;
             var h = height / 2**i;
-            feeds[session.inputNames[session.inputNames.length - i - 1]] = new Tensor("float32", 
+            // feeds[session.inputNames[session.inputNames.length - i - 1]] = new Tensor("float32", 
+            //     new Float32Array(architecture[i] * w * h), 
+            //     [1, architecture[i], h, w]
+            // );
+            feeds[names[names.length - i - 1]] = new tf.tensor( 
                 new Float32Array(architecture[i] * w * h), 
-                [1, architecture[i], h, w]
-            );
+                [1, architecture[i], h, w], "float32");
         }
     }
-    const start = new Date();  
-    const outputData = await session.run(feeds);
-    const results = outputData[session.outputNames[0]].data;
-    recurrentState = [
-        outputData[session.outputNames[3]],
-        outputData[session.outputNames[4]],
-        outputData[session.outputNames[5]],
-        outputData[session.outputNames[6]]
-    ];
+    const start = new Date(); 
+    var data = await session.executeAsync(feeds);
+    var results = await data[0].data();
+    // const outputData = await session.run(feeds);
+    // const results = outputData[session.outputNames[0]].data;
+    // recurrentState = [
+    //     outputData[session.outputNames[3]],
+    //     outputData[session.outputNames[4]],
+    //     outputData[session.outputNames[5]],
+    //     outputData[session.outputNames[6]]
+    // ];
     const end = new Date();
     const inferenceTime = Math.round(end.getTime() - start.getTime());
   
@@ -82,7 +90,8 @@ export async function getImageTensorFromPath(path, dims) {
       float32Data[i] = transposedData[i] / 255.0; // convert to float
     }
     // 5. create the tensor object from onnxruntime-web.
-    const inputTensor = new Tensor("float32", float32Data, dims);
+    // const inputTensor = new Tensor("float32", float32Data, dims);
+    const inputTensor = tf.tensor(float32Data, dims, 'float32')
     return inputTensor;
   }
   

@@ -6,7 +6,9 @@ import {display_render_frag_spv, display_render_vert_spv} from "./embedded_shade
 import {vec3, mat4} from "gl-matrix";
 import {saveAs} from 'file-saver';
 import {imageDataToTensor, runInference, getImageTensorFromPath, cleanRecurrentState} from "./inference";
-import {InferenceSession} from "onnxruntime-web/webgpu";
+import * as tf from '@tensorflow/tfjs';
+import "@tensorflow/tfjs-backend-webgpu";
+import {loadGraphModel} from '@tensorflow/tfjs-converter';
 
 (async () => {
     function runBenchmark(benchmark) {
@@ -155,15 +157,25 @@ import {InferenceSession} from "onnxruntime-web/webgpu";
     var recordVisibleBlocksUI = document.getElementById("recordVisibleBlocks")
 
     var session;
-    try {
-        session = await InferenceSession.create(`./noof${width}.onnx`,
-            {executionProviders: ['webgpu'], graphOptimizationLevel: 'all'});
-        console.log(session);
-        var imageReadbackArray = new Uint8ClampedArray(width * height);
-        var inputTensor = imageDataToTensor(imageReadbackArray, [1, 3, height, width]);
-    } catch (e) {
-        console.log(e);
-    }
+    // try {
+    //     session = await InferenceSession.create(`./noof${width}.onnx`,
+    //         {executionProviders: ['webgpu'], graphOptimizationLevel: 'all'});
+    //     console.log(session);
+    //     var imageReadbackArray = new Uint8ClampedArray(width * height);
+    //     var inputTensor = imageDataToTensor(imageReadbackArray, [1, 3, height, width]);
+    // } catch (e) {
+    //     console.log(e);
+    // }
+
+    tf.setBackend('webgpu');
+    await tf.ready();
+    const model = await loadGraphModel("noof-tfjs-uint8/model.json");
+    console.log(tf.getBackend());
+    console.log(model);
+    var imageReadbackArray = new Uint8ClampedArray(width * height);
+    var inputTensor = imageDataToTensor(imageReadbackArray, [1, 3, height, width]);
+    await runInference(model, inputTensor, width, height);
+    // model.execute(tf.browser.fromPixels(document.getElementById('test')));
 
     let completenessThreshold = document.getElementById("completenessThreshold");
     var outCanvas = document.getElementById("out-canvas");
@@ -213,9 +225,9 @@ import {InferenceSession} from "onnxruntime-web/webgpu";
             usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         });
 
-        session = await InferenceSession.create(`./noof${width}.onnx`,
-            {executionProviders: ['webgpu'], graphOptimizationLevel: 'all'});
-        cleanRecurrentState();
+        // session = await InferenceSession.create(`./noof${width}.onnx`,
+        //     {executionProviders: ['webgpu'], graphOptimizationLevel: 'all'});
+        // cleanRecurrentState();
     };
     headstartSlider.onchange = async () => {
         volumeRC = new VolumeRaycaster(
@@ -402,7 +414,7 @@ import {InferenceSession} from "onnxruntime-web/webgpu";
 
     if (autobenchmarkConfig) {
         requestBenchmark = "random";
-        document.getElementById("infer").checked = true;
+        // document.getElementById("infer").checked = true;
     }
 
     var recomputeSurface = true;
@@ -419,7 +431,7 @@ import {InferenceSession} from "onnxruntime-web/webgpu";
                 var valueBenchmark =
                     new RandomIsovalueBenchmark(isovalueSlider, dataset.range);
                 // cameraBenchmark = new CameraOrbitBenchmark(1.5);
-                cameraBenchmark = new RotateBenchmark(1.5, canvas.width, canvas.height);
+                cameraBenchmark = new RotateBenchmark(1.0, canvas.width, canvas.height);
                 currentBenchmark = new NestedBenchmark(valueBenchmark, cameraBenchmark);
             } else if (requestBenchmark == "sweepUp") {
                 var valueBenchmark =
@@ -585,8 +597,8 @@ import {InferenceSession} from "onnxruntime-web/webgpu";
                 var inputTensor = imageDataToTensor(imageReadbackArray, [1, 3, height, width]);
                 imageBuffer.unmap();
                 try {
-                    var [results, inferenceTime] = await runInference(session, inputTensor, width, height);
-                    // console.log("results", results);
+                    var [results, inferenceTime] = await runInference(model, inputTensor, width, height);
+                    console.log("results", results);
                     console.log("inference time", inferenceTime);
                     var textureData = new Uint8ClampedArray(results.length + width * height);
                     // var min = 32767, max = 0;

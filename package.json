@@ -26,6 +26,9 @@
     "webpack-dev-server": "^4.2.1"
   },
   "dependencies": {
+    "@tensorflow/tfjs": "^4.16.0",
+    "@tensorflow/tfjs-backend-wasm": "^4.16.0",
+    "@tensorflow/tfjs-backend-webgpu": "^4.16.0",
     "file-saver": "^2.0.5",
     "gl-matrix": "^3.4.3",
     "jimp": "^0.22.10",
